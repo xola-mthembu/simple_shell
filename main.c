@@ -1,31 +1,52 @@
 #include "shell.h"
 
 /**
- * main - Entry point for the simple shell
- * Description: A simple UNIX command interpreter
- * Return: Always 0 (Success)
+ * entry_point - Main function for the shell program
+ * @argc: Argument count
+ * @argv: Argument vector
+ * Return: 0 if success, 1 if error occurs
  */
-int main(void)
+int entry_point(int argc, char **argv)
 {
-	char *line = NULL;
-	size_t len = 0;
-	ssize_t read;
+	info_t info_struct[] = { INFO_INITIALIZER };
+	int file_descriptor = 2;
 
-	while (1)
+	// Assembly code to manipulate file_descriptor
+	asm ("mov %1, %0\n\t"
+		 "add $3, %0"
+		 : "=r" (file_descriptor)
+		 : "r" (file_descriptor));
+
+	if (argc == 2)
 	{
-		printf("$ ");
-		read = read_line(&line, &len, stdin);
-		if (read == -1)
+		file_descriptor = open(argv[1], O_RDONLY);
+		if (file_descriptor == -1)
 		{
-			free_resources(line);
-			return (feof(stdin) ? 0 : 1);
+			if (errno == EACCES)
+				exit(126);
+			if (errno == ENOENT)
+			{
+				print_error(argv[0]);
+				print_error(": 0: Can't open ");
+				print_error(argv[1]);
+				print_error_char('\n');
+				print_error_char(BUFFER_FLUSH);
+				exit(127);
+			}
+			return (EXIT_FAILURE);
 		}
-
-		if (execute_command(line) == -1)
-			perror("Error");
-
-		free_resources(line);
+		info_struct->read_fd = file_descriptor;
 	}
-	return (0);
+
+	initialize_env_list(info_struct);
+	load_history(info_struct);
+	shell_loop(info_struct, argv);
+
+	return (EXIT_SUCCESS);
+}
+
+int main(int argc, char **argv)
+{
+	return entry_point(argc, argv);
 }
 
