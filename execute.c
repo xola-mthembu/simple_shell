@@ -25,13 +25,13 @@ int execute_command(char *cmd)
 	else if (pid < 0)
 	{
 		/* Error forking */
-		return -1;
+		return (-1);
 	}
 	else
 	{
 		/* Parent process */
 		wait(&status);
 	}
-	return 0;
+	return (0);
 }
 
