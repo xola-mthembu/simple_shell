@@ -1,24 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <sys/stat.h>
-#include <string.h>
 
 #define MAX_COMMAND_LENGTH 100
 #define MAX_ARGS 10
 #define MAX_PATH_LENGTH 1024
 
-/**
- * execute_command - Searches for and executes a command in the PATH
- * @command: The command to execute
- * @argv: Argument vector for the command to execute
- * @envp: Environment variables
- *
- * Return: void. Exits with EXIT_FAILURE if command execution fails.
- */
-void execute_command(char *command, char *argv[], char **envp)
+void execute_command(char *argv[], char **envp)
 {
 	char *path = getenv("PATH");
 	char full_command[MAX_PATH_LENGTH];
@@ -26,39 +17,26 @@ void execute_command(char *command, char *argv[], char **envp)
 
 	while (path_token != NULL)
 	{
-		snprintf(full_command, MAX_PATH_LENGTH, "%s/%s", path_token, command);
+		snprintf(full_command, MAX_PATH_LENGTH, "%s/%s", path_token, argv[0]);
 		if (access(full_command, X_OK) == 0)
 		{
 			argv[0] = full_command;
 			execve(full_command, argv, envp);
+			return; 
 		}
 		path_token = strtok(NULL, ":");
 	}
 
-	fprintf(stderr, "%s: command not found\n", command);
+	fprintf(stderr, "%s: command not found\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
-/**
- * main - Entry point for the simple shell 0.3
- * Description: Extend the simple shell to handle the PATH environment var.
- * Parses the input and searches for executables in the PATH before executing.
- * Does not call fork if the command doesn’t exist.
- * @argc: Argument count.
- * @argv: Argument vector.
- * @envp: Environment variables.
- * Return: 0 on successful execution, or error code on failure.
- */
-int main(int argc, char **argv, char **envp)
+int main(void)
 {
 	char command[MAX_COMMAND_LENGTH];
-	char *command_argv[MAX_ARGS];
+	char *argv[MAX_ARGS];
 	char *token;
-	int i, status;
-
-	/* Casting argc and argv to void to indicate intentional unused */
-	(void)argc;
-	(void)argv;
+	int i;
 
 	while (1)
 	{
@@ -66,26 +44,31 @@ int main(int argc, char **argv, char **envp)
 		fflush(stdout);
 
 		if (fgets(command, MAX_COMMAND_LENGTH, stdin) == NULL)
-			break;
+		{
+			printf("\n");
+			continue;
+		}
 
 		if (command[strlen(command) - 1] == '\n')
 			command[strlen(command) - 1] = '\0';
 
+		i = 0;
 		token = strtok(command, " ");
-		for (i = 0; token != NULL && i < MAX_ARGS; i++)
+		while (token != NULL && i < MAX_ARGS - 1)
 		{
-			command_argv[i] = token;
+			argv[i++] = token;
 			token = strtok(NULL, " ");
 		}
-		command_argv[i] = NULL;
+		argv[i] = NULL;
 
-		if (command_argv[0] == NULL)
-			continue;
-
-		if (fork() == 0)
-			execute_command(command_argv[0], command_argv, envp);
-		else
-			wait(&status);
+		if (argv[0] != NULL)
+		{
+			if (fork() == 0)
+				execute_command(argv, environ);
+			else
+				wait(NULL);
+		}
 	}
+
 	return (0);
 }
