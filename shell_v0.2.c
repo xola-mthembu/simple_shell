@@ -1,45 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <sys/wait.h>
 #include <string.h>
+#include <unistd.h>
 
 #define MAX_COMMAND_LENGTH 100
 #define MAX_ARGS 10
 
 /**
- * execute_command - Executes a command with arguments
- * @argv: Argument vector for the command to execute
- *
- * Return: void
- */
-void execute_command(char *argv[])
-{
-	if (fork() == 0)
-	{
-		/* Child process */
-		if (execve(argv[0], argv, NULL) == -1)
-		{
-			perror("./shell_v0.2");
-			exit(EXIT_FAILURE);
-		}
-	}
-	else
-	{
-		/* Parent process */
-		int status;
-
-		wait(&status);
-	}
-}
-
-/**
  * main - Entry point for the simple shell 0.2
+ * Description: Enhances the shell to handle command lines with arguments.
  *
- * Description: Extend the simple shell to handle command lines with arguments.
- * Parses the input and executes the command with the given arguments.
- *
- * Return: 0 on successful execution, or error code on failure.
+ * Return: 0 on success, non-zero on error.
  */
 int main(void)
 {
@@ -50,27 +21,29 @@ int main(void)
 
 	while (1)
 	{
-		printf("#cisfun$ ");  /* Display the prompt */
+		printf("#cisfun$ ");
 		fflush(stdout);
 
 		if (fgets(command, MAX_COMMAND_LENGTH, stdin) == NULL)
-			break;  /* Handle EOF */
+		{
+			printf("\n");
+			continue;
+		}
 
 		if (command[strlen(command) - 1] == '\n')
-			command[strlen(command) - 1] = '\0';  /* Remove newline character */
+			command[strlen(command) - 1] = '\0';
 
-		/* Tokenize the input */
-		token = strtok(command, " ");
 		i = 0;
-
-		while (token != NULL && i < MAX_ARGS)
+		token = strtok(command, " ");
+		while (token != NULL && i < MAX_ARGS - 1)
 		{
 			argv[i++] = token;
 			token = strtok(NULL, " ");
 		}
-		argv[i] = NULL;  /* Null-terminate the arguments list */
+		argv[i] = NULL;
 
-		execute_command(argv);
+		if (argv[0] != NULL)
+			system(argv[0]);
 	}
 
 	return (0);
